@@ -1,4 +1,3 @@
-
 class Boid {
     constructor(flockID, boidID, position, v, a) {
         this.width = 20;
@@ -7,25 +6,20 @@ class Boid {
         this.separationRadius = 40;
         this.flockID = flockID;
         this.boidID = boidID;
-        this.maxVelocity = 4;
-        this.maxAcceleration = 1;
-        this.minAcceleration = 0;
-        this.accelerationDir = true;
+        this.maxVelocity = 5;
+        this.maxAcceleration = 2;
         this.position = position ? position : createVector(random(-width/2, width/2), random(-height/2, height/2));
         this.velocity = p5.Vector.random2D();
         this.velocity.mag(random(1, this.maxVelocity));
-        this.acceleration = this.velocity.copy().setMag(random(1, this.maxAcceleration));
-        this.maxSteerForce = 0.03;
-        this.drag = 0.001;
-
-        this.update();
+        this.acceleration = createVector(0, 0);
+        this.maxSteerForce = 0.1;
     }
 
 
     draw() {
 
         this.drawBody();
-        this.drawDebug();
+        //this.drawDebug();
     }
 
     drawBody() {
@@ -53,7 +47,7 @@ class Boid {
             noFill();
             circle(0, 0, this.viewRadius * 2);
             pop();
-
+        
             //for each near boid draw a line between them
             const otherBoids = this.otherBoidsInVision();
             otherBoids.forEach(boid => {
@@ -63,9 +57,6 @@ class Boid {
                 line(this.position.x, this.position.y, boid.position.x, boid.position.y);
                 pop();
             });
-
-            speedDebugEle.textContent = this.velocity.mag().toFixed(2);
-            accelerationDebugEle.textContent = this.acceleration.mag().toFixed(2);
         }
 
     }
@@ -76,47 +67,30 @@ class Boid {
 
         if (this.velocity.mag() > this.maxVelocity) this.velocity.setMag(this.maxVelocity);
 
-        //decraseAcceleration
-        //this.decreaseAcceleration();
         this.boundHandle();
-        //this.drawVector(this.position, this.velocity.copy(), 'black');
-
+        //if (this.boidID == 0) this.drawVector(this.position, this.velocity.copy(), 'black');
         
         const aligmentV = this.handleAligment();
-        const cohesionV = this.handleCohesion();
-        const separationV = this.handleSeparation();
+        const CohesionV = this.handleCohesion();
+        const SeparationV = this.handleSeparation();
 
         let avg = createVector(0, 0);
         if (aligmentV) avg.add(aligmentV);
-        if (cohesionV) avg.add(cohesionV);
-        if (separationV) avg.add(separationV);
-
-        if (this.boidID == 0) {
+        if (CohesionV) avg.add(CohesionV);
+        if (SeparationV) avg.add(SeparationV);
+        /*if (this.boidID == 0) {
             if (aligmentV) this.drawVector(this.position, aligmentV, 'orange');
-            if (cohesionV) this.drawVector(this.position, cohesionV, 'red');
-            if (separationV) this.drawVector(this.position, separationV, 'blue');
-        }
+            if (CohesionV) this.drawVector(this.position, CohesionV, 'red');
+            if (SeparationV) this.drawVector(this.position, SeparationV, 'blue');
+        }*/
         avg.div(3);
         if (avg.mag() > 0) {
-            if (avg.mag() > this.maxVelocity) avg.setMag(this.maxVelocity);
-            if (this.boidID == 0) this.drawVector(this.position, avg, 'purple');
+            avg.setMag(this.maxVelocity);
+            //if (this.boidID == 0) this.drawVector(this.position, avg, 'purple');
             this.steerTowards(avg);
         }
 
 
-    }
-
-    decreaseAcceleration() {
-        const mag = this.acceleration.mag();
-        let newMag = mag - this.drag;
-
-        if (newMag >= 0) this.acceleration.setMag(newMag)
-        else {
-            this.acceleration.setMag(0);
-            const newVelocityMag = this.velocity.mag() - this.drag;
-            this.velocity.setMag(newVelocityMag <= 0 ? 0 : newVelocityMag)
-
-        };
     }
 
     boundHandle() {
@@ -140,63 +114,43 @@ class Boid {
             avg.add(boid.velocity);
         });
         if (otherBoids.length != 0) {
-            avg.div(otherBoids.length).mult(ALIGN_SCALE).limit(this.maxSteerForce);
+            avg.div(otherBoids.length);
             return avg;
         }
-
-        return createVector(0, 0)
     }
 
     handleCohesion() {
         const otherBoids = this.otherBoidsInVision();
+        //figure avarage position
+        let avg = createVector(0, 0);
+        otherBoids.forEach(boid => {
+            avg.add(boid.position);
+        });
         if (otherBoids.length != 0) {
-            //figure avarage position
-            let avg = createVector(0,0);//this.position.copy();
-            otherBoids.forEach(boid => {
-                avg.add(boid.position);
-            });
-
             avg.div(otherBoids.length);
-
-
-            let steer = p5.Vector.sub(avg, this.position).mult(COHISION_SCALE).limit(this.maxSteerForce);
-            /*if (this.boidID == 0) { //vectors are scaled when drawn!! will no end in points
-                console.log(steer.x, steer.y, steer.mag(), p5.Vector.dist(this.position, avg));
-                push();
-                fill(100, 100, 100);
-                noStroke();
-                circle(avg.x, avg.y, 10);
-
-                fill(200,200,0);
-                circle(steer.x, steer.y, 10);
-                pop();
-
-            };*/
+            let steer = avg.sub(this.position);
+            if(steer.mag() > this.maxVelocity) steer.setMag(this.maxSteerForce);
             return steer;
         }
-
-        return createVector(0, 0)
     }
 
     handleSeparation() {
         const otherBoids = this.otherBoidsInVision(this.separationRadius);
         let targetVector = createVector(0, 0);
+        otherBoids.forEach(boid => {
+            //add the vector pointing away from the other boid, weighted by the distance
+            const awayVector = p5.Vector.sub(this.position, boid.position);
+            const distance = this.position.dist(boid.position);
+            if (distance > 0) {
+                awayVector.mult(1- (distance / this.separationRadius));
+                targetVector.add(awayVector);
+            }
+        });
         if (otherBoids.length != 0) {
-            otherBoids.forEach(boid => {
-                //add the vector pointing away from the other boid, weighted by the distance
-                const distance = this.position.dist(boid.position);
-                const distanceScale = 1 - (distance / this.separationRadius)
-                targetVector.x += (this.position.x-boid.position.x) *distanceScale;
-                targetVector.y += (this.position.y-boid.position.y) *distanceScale;
-
-            });
-
-            //targetVector.div(otherBoids.length);
-            targetVector = targetVector.mult(SEPARAION_SCALE).limit(this.maxSteerForce)
+            targetVector.div(otherBoids.length);
+            
             return targetVector;
         }
-
-        return createVector(0, 0)
     }
 
     otherBoidsInVision(radius = this.viewRadius) {
@@ -209,22 +163,18 @@ class Boid {
         //figure new acceleration
 
         let steer = target.sub(this.velocity);
-        if (steer.mag() > 0.1) {
-            steer = steer.limit(this.maxSteerForce);
-            steerDebugEle.textContent = steer.mag().toFixed(2);
-            this.acceleration.add(steer);
-            if (this.acceleration.mag() > this.maxAcceleration) this.acceleration.setMag(this.maxAcceleration);
+        steer = steer.limit(this.maxSteerForce);
+        this.acceleration.add(steer);
+        if(this.acceleration.mag() > this.maxAcceleration) this.acceleration.setMag(this.maxAcceleration);
 
-            if (this.boidID == 0) this.drawVector(this.position, steer, 'green');
-            //console.log(this.acceleration.x, this.acceleration.y, this.acceleration.mag());            
-        }
-
+        //if (this.boidID == 0) this.drawVector(this.position, steer, 'green');
+        //console.log(this.acceleration.x, this.acceleration.y, this.acceleration.mag());
     }
 
     drawVector(inpBase, inpVec, myColor) {
         let base = inpBase.copy();
         let vec = inpVec.copy();
-        vec.setMag(vec.mag()*10);
+        vec.setMag(vec.mag() * 10);
         push();
         stroke(myColor);
         strokeWeight(3);
