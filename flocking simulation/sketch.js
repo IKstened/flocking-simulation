@@ -11,7 +11,7 @@ let SEPARAION_SCALE = 1.1;
 let ALIGN_SCALE = 0.8;
 
 let LAST_TIME = Date.now();
-const updateTimeStep = 10; //ms
+const updateTimeStep = 50; //ms
 
 document.querySelectorAll("input").forEach(input => {
   if (input.id.includes("align")) ALIGN_SCALE = input.value;
@@ -52,7 +52,7 @@ function draw() {
   const doUpdate = newTime - LAST_TIME > updateTimeStep
   flocks.forEach(flock => {
     flock.forEach(boid => {
-      if (doUpdate) boid.update();
+      if (doUpdate) boid.updateSteer();
       boid.draw()
     });
   });

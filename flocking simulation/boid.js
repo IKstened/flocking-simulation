@@ -8,7 +8,7 @@ class Boid {
         this.boidID = boidID;
         this.maxVelocity = 5;
         this.maxAcceleration = 2;
-        this.position = position ? position : createVector(random(-width/2, width/2), random(-height/2, height/2));
+        this.position = position ? position : createVector(random(-width / 2, width / 2), random(-height / 2, height / 2));
         this.velocity = p5.Vector.random2D();
         this.velocity.mag(random(1, this.maxVelocity));
         this.acceleration = createVector(0, 0);
@@ -17,6 +17,8 @@ class Boid {
 
 
     draw() {
+
+        this.updateSpeed();
 
         this.drawBody();
         //this.drawDebug();
@@ -47,7 +49,7 @@ class Boid {
             noFill();
             circle(0, 0, this.viewRadius * 2);
             pop();
-        
+
             //for each near boid draw a line between them
             const otherBoids = this.otherBoidsInVision();
             otherBoids.forEach(boid => {
@@ -61,7 +63,7 @@ class Boid {
 
     }
 
-    update() {
+    updateSpeed() {
         this.position.add(this.velocity);
         this.velocity.add(this.acceleration);
 
@@ -69,21 +71,36 @@ class Boid {
 
         this.boundHandle();
         //if (this.boidID == 0) this.drawVector(this.position, this.velocity.copy(), 'black');
-        
+    }
+
+    updateSteer() {
+
+
         const aligmentV = this.handleAligment();
         const CohesionV = this.handleCohesion();
         const SeparationV = this.handleSeparation();
 
         let avg = createVector(0, 0);
-        if (aligmentV) avg.add(aligmentV);
-        if (CohesionV) avg.add(CohesionV);
-        if (SeparationV) avg.add(SeparationV);
+        let i = 0;
+        if (aligmentV) {
+            avg.add(aligmentV);
+            i++;
+        }
+        if (CohesionV) {
+            avg.add(CohesionV);
+            i++;
+        }
+        if (SeparationV) {
+            avg.add(SeparationV);
+            i++;
+        }
         /*if (this.boidID == 0) {
             if (aligmentV) this.drawVector(this.position, aligmentV, 'orange');
             if (CohesionV) this.drawVector(this.position, CohesionV, 'red');
             if (SeparationV) this.drawVector(this.position, SeparationV, 'blue');
         }*/
-        avg.div(3);
+        if(i == 0) i = 1;
+        avg.div(i);
         if (avg.mag() > 0) {
             avg.setMag(this.maxVelocity);
             //if (this.boidID == 0) this.drawVector(this.position, avg, 'purple');
@@ -95,15 +112,15 @@ class Boid {
 
     boundHandle() {
         //check if out of bounds
-        if (this.position.x < -width/2) {
-            this.position.x = width/2;
-        } else if (this.position.x > width/2) {
-            this.position.x = -width/2;
+        if (this.position.x < -width / 2) {
+            this.position.x = width / 2;
+        } else if (this.position.x > width / 2) {
+            this.position.x = -width / 2;
         }
-        if (this.position.y < -height/2) {
-            this.position.y = height/2;
-        } else if (this.position.y > height/2) {
-            this.position.y = -height/2;
+        if (this.position.y < -height / 2) {
+            this.position.y = height / 2;
+        } else if (this.position.y > height / 2) {
+            this.position.y = -height / 2;
         }
     }
 
@@ -129,7 +146,7 @@ class Boid {
         if (otherBoids.length != 0) {
             avg.div(otherBoids.length);
             let steer = avg.sub(this.position);
-            if(steer.mag() > this.maxVelocity) steer.setMag(this.maxSteerForce);
+            if (steer.mag() > this.maxVelocity) steer.setMag(this.maxSteerForce);
             return steer;
         }
     }
@@ -142,13 +159,13 @@ class Boid {
             const awayVector = p5.Vector.sub(this.position, boid.position);
             const distance = this.position.dist(boid.position);
             if (distance > 0) {
-                awayVector.mult(1- (distance / this.separationRadius));
+                awayVector.mult(1 - (distance / this.separationRadius));
                 targetVector.add(awayVector);
             }
         });
         if (otherBoids.length != 0) {
             targetVector.div(otherBoids.length);
-            
+
             return targetVector;
         }
     }
@@ -165,7 +182,7 @@ class Boid {
         let steer = target.sub(this.velocity);
         steer = steer.limit(this.maxSteerForce);
         this.acceleration.add(steer);
-        if(this.acceleration.mag() > this.maxAcceleration) this.acceleration.setMag(this.maxAcceleration);
+        if (this.acceleration.mag() > this.maxAcceleration) this.acceleration.setMag(this.maxAcceleration);
 
         //if (this.boidID == 0) this.drawVector(this.position, steer, 'green');
         //console.log(this.acceleration.x, this.acceleration.y, this.acceleration.mag());
